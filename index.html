@@ -356,6 +356,28 @@ input[type=number]{-moz-appearance:textfield}
   </header>
 
   <main class="pt-24 px-6 max-w-lg mx-auto space-y-5">
+    <!-- Gemini AI Key -->
+    <div class="bg-surface-container rounded-2xl p-5 border border-white/5">
+      <h3 class="editorial-text font-bold text-on-surface mb-1 flex items-center gap-2">
+        <span class="material-symbols-outlined text-orange-400" style="font-size:20px">auto_awesome</span>
+        AI 自動辨識發票
+      </h3>
+      <p class="text-xs text-on-surface-variant mb-4">輸入 Gemini API Key 後，掃描照片時 AI 將自動填入所有資訊</p>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-on-surface-variant font-semibold uppercase tracking-wider block mb-2">Gemini API Key</label>
+          <input id="setting-gemini" type="password" placeholder="AIza..." class="w-full bg-surface-container-high rounded-xl px-4 py-3 text-on-surface font-mono text-sm outline-none focus:ring-2 focus:ring-orange-500 border border-white/5"/>
+        </div>
+        <div class="bg-orange-500/10 border border-orange-500/20 rounded-xl p-3">
+          <p class="text-xs text-orange-400 font-semibold">📋 如何取得免費 API Key？</p>
+          <p class="text-xs text-on-surface-variant mt-1">1. 前往 aistudio.google.com<br/>2. 點「Get API Key」→「Create API Key」<br/>3. 複製並貼上到這裡（完全免費）</p>
+        </div>
+        <button onclick="saveSettings()" class="w-full bg-orange-500 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform text-sm">
+          儲存 API Key
+        </button>
+      </div>
+    </div>
+
     <!-- Exchange Rate -->
     <div class="bg-surface-container rounded-2xl p-5 border border-white/5">
       <h3 class="editorial-text font-bold text-on-surface mb-4 flex items-center gap-2">
@@ -457,6 +479,20 @@ input[type=number]{-moz-appearance:textfield}
 ═══════════════════════════════════════════ -->
 <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-surface-container-highest text-on-surface px-6 py-3 rounded-full text-sm font-semibold shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none whitespace-nowrap"></div>
 
+<!-- AI 辨識 Loading Overlay -->
+<div id="ai-loading" class="hidden fixed inset-0 z-[300] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-6">
+  <div class="w-20 h-20 rounded-3xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
+    <span class="material-symbols-outlined text-orange-400 spin" style="font-size:40px">auto_awesome</span>
+  </div>
+  <div class="text-center">
+    <p class="text-white font-bold text-lg">AI 辨識中</p>
+    <p class="text-white/60 text-sm mt-1">正在讀取發票資訊…</p>
+  </div>
+  <div class="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden">
+    <div class="h-full bg-orange-500 rounded-full animate-pulse w-3/4"></div>
+  </div>
+</div>
+
 <div id="confirm-overlay" class="hidden fixed inset-0 z-[200] bg-black/70 flex items-end justify-center pb-8 px-4">
   <div class="bg-surface-container-high w-full max-w-sm rounded-3xl p-6 shadow-2xl">
     <h3 class="editorial-text font-bold text-lg text-on-surface mb-2" id="confirm-title">確認</h3>
@@ -480,7 +516,7 @@ let state = {
   editingId: null,
   capturedPhoto: null,
   cameraStream: null,
-  settings: { rate: 0.21, budget: 80000 }
+  settings: { rate: 0.21, budget: 80000, geminiKey: '' }
 };
 
 let expenses = [];
@@ -511,9 +547,10 @@ function saveData() {
 function saveSettings() {
   const r = parseFloat(document.getElementById('setting-rate').value) || 0.21;
   const b = parseInt(document.getElementById('setting-budget').value) || 80000;
-  state.settings = { rate: r, budget: b };
+  const g = document.getElementById('setting-gemini').value.trim();
+  state.settings = { rate: r, budget: b, geminiKey: g };
   localStorage.setItem('jp_settings', JSON.stringify(state.settings));
-  showToast('✅ 設定已儲存');
+  showToast(g ? '✅ 設定已儲存，AI 辨識已啟用！' : '✅ 設定已儲存');
 }
 
 // ─── NAVIGATION ─────────────────────────────
@@ -683,20 +720,20 @@ function openAddFromRecords() {
 let selectedCategory = 'food';
 let itemCount = 0;
 
-function openEdit(id) {
+function openEdit(id, prefill) {
   state.editingId = id;
   itemCount = 0;
 
-  document.getElementById('edit-screen-title').textContent = id ? '編輯支出' : '新增支出';
+  document.getElementById('edit-screen-title').textContent = id ? '編輯支出' : (prefill ? '✨ AI 自動填入' : '新增支出');
   document.getElementById('delete-btn').classList.toggle('hidden', !id);
 
   const e = id ? expenses.find(x=>x.id===id) : null;
 
-  // Fill fields
-  document.getElementById('edit-store').value = e?.store || '';
-  document.getElementById('edit-date').value = e?.date || today();
-  document.getElementById('edit-time').value = e?.time || nowTime();
-  selectedCategory = e?.category || 'food';
+  // Fill fields — prefill takes priority over blank, saved record takes priority over all
+  document.getElementById('edit-store').value = e?.store || prefill?.store || '';
+  document.getElementById('edit-date').value = e?.date || prefill?.date || today();
+  document.getElementById('edit-time').value = e?.time || prefill?.time || nowTime();
+  selectedCategory = e?.category || prefill?.category || 'food';
 
   // Photo
   const pv = document.getElementById('edit-photo-preview');
@@ -710,7 +747,8 @@ function openEdit(id) {
   }
 
   renderCategoryChips();
-  renderItems(e?.items || [{ nameZh:'', nameJp:'', amountJpy:0 }]);
+  const defaultItems = prefill?.items?.length ? prefill.items.map(i=>({nameZh:i.nameZh||'',nameJp:i.nameJp||'',amountJpy:i.amountJpy||0})) : [{ nameZh:'', nameJp:'', amountJpy:0 }];
+  renderItems(e?.items || defaultItems);
   updateTotal();
   showScreen('screen-edit');
 }
@@ -845,6 +883,7 @@ function deleteCurrentExpense() {
 function renderSettings() {
   document.getElementById('setting-rate').value = state.settings.rate;
   document.getElementById('setting-budget').value = state.settings.budget;
+  document.getElementById('setting-gemini').value = state.settings.geminiKey || '';
 
   const total = expenses.reduce((s,e)=>s+(e.totalJpy||0),0);
   document.getElementById('settings-stats').innerHTML = `
@@ -923,12 +962,12 @@ async function toggleFlash() {
 function capturePhoto() {
   const video = document.getElementById('camera-video');
   const canvas = document.getElementById('camera-canvas');
-  if (!video.srcObject) { showManualEntry(); return; }
+  if (!video.srcObject) { showManualEntry(null); return; }
   canvas.width = video.videoWidth || 1280;
   canvas.height = video.videoHeight || 720;
   canvas.getContext('2d').drawImage(video, 0, 0);
   state.capturedPhoto = canvas.toDataURL('image/jpeg', 0.8);
-  showManualEntry();
+  processPhotoWithAI(state.capturedPhoto);
 }
 
 function handleGalleryPhoto(event) {
@@ -937,15 +976,78 @@ function handleGalleryPhoto(event) {
   const reader = new FileReader();
   reader.onload = e => {
     state.capturedPhoto = e.target.result;
-    showManualEntry();
+    processPhotoWithAI(state.capturedPhoto);
   };
   reader.readAsDataURL(file);
 }
 
-function showManualEntry() {
+async function processPhotoWithAI(imageBase64) {
+  if (!state.settings.geminiKey) {
+    showManualEntry(null);
+    return;
+  }
+  showAILoading(true);
+  try {
+    const result = await ocrWithGemini(imageBase64);
+    showAILoading(false);
+    showManualEntry(result);
+  } catch(e) {
+    showAILoading(false);
+    showToast('⚠️ AI 辨識失敗，請手動填寫');
+    showManualEntry(null);
+  }
+}
+
+async function ocrWithGemini(imageBase64) {
+  const key = state.settings.geminiKey;
+  const base64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+  const prompt = `這是一張日本商店收據或發票的照片。請仔細辨識並以JSON格式回傳以下資訊：
+{
+  "store": "店名（日文轉羅馬字或直接用中文常見名稱，例如：7-Eleven、FamilyMart、すき家）",
+  "date": "日期（格式：YYYY-MM-DD，若看不清楚填今天）",
+  "time": "時間（格式：HH:MM，若看不清楚填空字串）",
+  "category": "類別（只能填：food、conv、transport、shopping、hotel、other 其中之一，便利商店填conv，餐廳填food）",
+  "items": [
+    {"nameJp": "日文品名（原文）", "nameZh": "中文翻譯", "amountJpy": 金額數字（整數）}
+  ]
+}
+注意：
+- items 只列有明確金額的商品，不要列小計或合計行
+- 所有金額都是日圓整數
+- 只回傳純 JSON，不要加任何說明文字`;
+
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: 'image/jpeg', data: base64 } }
+          ]
+        }],
+        generationConfig: { temperature: 0.1 }
+      })
+    }
+  );
+  if (!resp.ok) throw new Error('API error: ' + resp.status);
+  const data = await resp.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('No JSON in response');
+  return JSON.parse(match[0]);
+}
+
+function showAILoading(show) {
+  document.getElementById('ai-loading').classList.toggle('hidden', !show);
+}
+
+function showManualEntry(prefill) {
   state.editingId = null;
   state.lastScreenBeforeEdit = 'screen-home';
-  openEdit(null);
+  openEdit(null, prefill);
 }
 
 // ─── CONFIRM DIALOG ─────────────────────────
