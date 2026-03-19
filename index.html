@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-TW">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#0a0a0a"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="日本記帳"/>
+<title>日本記帳</title>
+<link rel="manifest" href="manifest.json"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode:"class",
+  theme:{extend:{
+    colors:{
+      "primary":"#F57C00","primary-container":"#F57C00","on-primary":"#ffffff",
+      "secondary":"#6ddd81","secondary-container":"#005320","on-secondary-container":"#86f898",
+      "tertiary":"#ffbb00","tertiary-container":"#996f00",
+      "background":"#0a0a0a","surface":"#121212","on-background":"#fbf9f8","on-surface":"#fbf9f8",
+      "surface-container-lowest":"#0a0a0a","surface-container-low":"#1c1c1c",
+      "surface-container":"#242424","surface-container-high":"#2c2c2c","surface-container-highest":"#333333",
+      "on-surface-variant":"#c1c6d6","outline":"#8b91a0","outline-variant":"#414754",
+      "error":"#ffb4ab","error-container":"#93000a"
+    },
+    fontFamily:{"headline":["Manrope"],"body":["Plus Jakarta Sans"],"label":["Plus Jakarta Sans"]},
+    borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"}
+  }}
+}
+</script>
+<style>
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#0a0a0a;color:#fbf9f8;min-height:100dvh;overscroll-behavior:none}
+.editorial-text{font-family:'Manrope',sans-serif}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+.fill-icon{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
+.screen{display:none;min-height:100dvh;padding-bottom:80px}
+.screen.active{display:block}
+#screen-scan{padding-bottom:0}
+.glass-card{background:rgba(27,28,28,0.5);backdrop-filter:blur(12px)}
+@keyframes scan-line{0%{top:15%}100%{top:75%}}
+.animate-scan{animation:scan-line 2.5s ease-in-out infinite alternate}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.25s ease-out}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin 1s linear infinite}
+.camera-viewfinder{background:#000}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type=number]{-moz-appearance:textfield}
+::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body class="bg-background text-on-background antialiased">
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 1: HOME
+═══════════════════════════════════════════ -->
+<div id="screen-home" class="screen active fade-in">
+  <header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-[#0a0a0a]/80 backdrop-blur-xl shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center border border-white/10">
+        <span class="material-symbols-outlined text-primary" style="font-size:18px">account_circle</span>
+      </div>
+      <h1 class="editorial-text font-bold text-lg tracking-tight text-primary">日本記帳</h1>
+    </div>
+    <button onclick="showScreen('screen-settings')" class="w-8 h-8 flex items-center justify-center rounded-full bg-surface-container">
+      <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px">settings</span>
+    </button>
+  </header>
+
+  <main class="pt-24 px-6 max-w-lg mx-auto pb-36">
+    <!-- Monthly Overview Card -->
+    <section class="mb-8">
+      <div class="bg-primary-container p-7 rounded-[2rem] shadow-[0_24px_48px_rgba(245,124,0,0.25)] relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="flex items-center justify-between mb-1">
+          <p class="font-label text-white/80 text-xs tracking-wide font-bold uppercase">總支出</p>
+          <div class="flex items-center gap-1">
+            <button onclick="changeMonth(-1)" class="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20">
+              <span class="material-symbols-outlined text-white" style="font-size:16px">chevron_left</span>
+            </button>
+            <span id="home-month-label" class="text-white text-xs font-bold px-1"></span>
+            <button onclick="changeMonth(1)" class="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20">
+              <span class="material-symbols-outlined text-white" style="font-size:16px">chevron_right</span>
+            </button>
+          </div>
+        </div>
+        <div class="editorial-text text-4xl font-extrabold text-white mb-3 tracking-tight" id="home-total-jpy">¥ 0</div>
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/15 border border-white/20">
+          <span class="material-symbols-outlined text-white" style="font-size:14px">sync</span>
+          <span class="text-xs font-medium text-white/90" id="home-total-twd">約 NT$ 0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Metrics -->
+    <section class="grid grid-cols-2 gap-4 mb-8">
+      <div class="bg-surface-container-low p-5 rounded-[1.5rem] flex flex-col justify-between h-28 border border-white/5">
+        <span class="material-symbols-outlined text-secondary" style="font-size:22px">receipt_long</span>
+        <div>
+          <p class="text-[11px] text-on-surface-variant uppercase tracking-wider font-bold">本月筆數</p>
+          <p class="editorial-text text-xl font-bold text-on-surface" id="home-count">0 筆</p>
+        </div>
+      </div>
+      <div class="bg-surface-container-low p-5 rounded-[1.5rem] flex flex-col justify-between h-28 border border-white/5">
+        <span class="material-symbols-outlined text-tertiary" style="font-size:22px">payments</span>
+        <div>
+          <p class="text-[11px] text-on-surface-variant uppercase tracking-wider font-bold">最大單筆</p>
+          <p class="editorial-text text-xl font-bold text-on-surface" id="home-max">¥ 0</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recent Expenses -->
+    <section>
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="editorial-text text-xl font-bold text-on-surface">最近支出</h2>
+        <button onclick="showScreen('screen-records')" class="text-primary text-sm font-semibold">查看全部</button>
+      </div>
+      <div id="home-recent-list" class="space-y-3"></div>
+      <div id="home-empty" class="hidden py-16 flex flex-col items-center justify-center text-center">
+        <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-4">
+          <span class="material-symbols-outlined text-on-surface-variant" style="font-size:28px">receipt_long</span>
+        </div>
+        <p class="text-on-surface-variant font-medium text-sm">還沒有記帳紀錄</p>
+        <p class="text-on-surface-variant/60 text-xs mt-1">按下方掃描按鈕開始記帳</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- FAB -->
+  <div class="fixed bottom-24 right-5 z-40">
+    <button onclick="showScreen('screen-scan')" class="flex items-center gap-2 bg-gradient-to-r from-primary to-[#ff9800] text-white px-5 py-3.5 rounded-full shadow-[0_12px_32px_rgba(245,124,0,0.4)] active:scale-95 transition-transform">
+      <span class="material-symbols-outlined fill-icon" style="font-size:20px">photo_camera</span>
+      <span class="font-label font-bold text-sm tracking-tight">快速掃描</span>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 2: SCAN (Camera)
+═══════════════════════════════════════════ -->
+<div id="screen-scan" class="screen camera-viewfinder relative">
+  <header class="fixed top-0 w-full z-50 bg-black/40 backdrop-blur-xl flex items-center justify-between px-6 py-4">
+    <div class="flex items-center gap-3">
+      <button onclick="showScreen('screen-home')" class="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center border border-white/10">
+        <span class="material-symbols-outlined text-white" style="font-size:20px">arrow_back</span>
+      </button>
+      <h1 class="editorial-text font-bold text-lg text-white">發票掃描</h1>
+    </div>
+    <button id="flash-btn" onclick="toggleFlash()" class="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center border border-white/10">
+      <span class="material-symbols-outlined text-orange-400" style="font-size:20px">flash_off</span>
+    </button>
+  </header>
+
+  <!-- Camera feed -->
+  <video id="camera-video" autoplay playsinline muted class="w-full h-screen object-cover"></video>
+  <canvas id="camera-canvas" class="hidden"></canvas>
+
+  <!-- No camera fallback -->
+  <div id="camera-fallback" class="hidden absolute inset-0 bg-[#111] flex flex-col items-center justify-center gap-4 text-center px-8">
+    <span class="material-symbols-outlined text-orange-400" style="font-size:56px">no_photography</span>
+    <p class="text-white font-bold text-lg">無法開啟相機</p>
+    <p class="text-white/60 text-sm">請允許相機權限，或使用手動輸入</p>
+    <button onclick="showManualEntry()" class="mt-2 bg-orange-500 text-white px-8 py-3 rounded-2xl font-bold">手動輸入</button>
+  </div>
+
+  <!-- Overlay -->
+  <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+    <div class="relative w-[260px] h-[420px] border border-white/20 rounded-3xl overflow-hidden shadow-[0_0_0_100vmax_rgba(0,0,0,0.6)]">
+      <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-orange-500 rounded-tl-lg"></div>
+      <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-orange-500 rounded-tr-lg"></div>
+      <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-orange-500 rounded-bl-lg"></div>
+      <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-orange-500 rounded-br-lg"></div>
+      <div class="absolute left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-orange-400 to-transparent shadow-[0_0_12px_rgba(249,115,22,0.8)] animate-scan"></div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="absolute bottom-28 w-full flex flex-col items-center gap-6 px-8 pointer-events-auto">
+    <div class="bg-black/50 backdrop-blur-md px-5 py-2 rounded-full border border-white/10">
+      <p class="text-xs text-white/90 tracking-wide">將發票對準框內</p>
+    </div>
+    <div class="flex items-center justify-between w-full max-w-[300px]">
+      <!-- Gallery -->
+      <label class="flex flex-col items-center gap-1 cursor-pointer">
+        <div class="w-14 h-14 rounded-2xl bg-black/50 border border-white/10 flex items-center justify-center active:scale-95 transition-transform">
+          <span class="material-symbols-outlined text-white" style="font-size:22px">photo_library</span>
+        </div>
+        <span class="text-[11px] text-white/70 font-medium">相簿</span>
+        <input type="file" accept="image/*" class="hidden" onchange="handleGalleryPhoto(event)"/>
+      </label>
+      <!-- Shutter -->
+      <button onclick="capturePhoto()" class="relative group">
+        <div class="absolute -inset-2 bg-orange-500/20 rounded-full blur-xl"></div>
+        <div class="relative w-20 h-20 rounded-full bg-white p-1 shadow-2xl active:scale-90 transition-transform">
+          <div class="w-full h-full rounded-full bg-gradient-to-tr from-orange-600 to-orange-400 flex items-center justify-center">
+            <span class="material-symbols-outlined fill-icon text-white" style="font-size:32px">camera</span>
+          </div>
+        </div>
+      </button>
+      <!-- Manual -->
+      <button onclick="showManualEntry()" class="flex flex-col items-center gap-1">
+        <div class="w-14 h-14 rounded-2xl bg-black/50 border border-white/10 flex items-center justify-center active:scale-95 transition-transform">
+          <span class="material-symbols-outlined text-white" style="font-size:22px">edit_note</span>
+        </div>
+        <span class="text-[11px] text-white/70 font-medium">手動輸入</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 3: ADD / EDIT EXPENSE
+═══════════════════════════════════════════ -->
+<div id="screen-edit" class="screen fade-in">
+  <header class="fixed top-0 left-0 w-full z-50 bg-[#0a0a0a]/90 backdrop-blur-xl flex items-center px-6 py-4 border-b border-white/5">
+    <button onclick="exitEdit()" class="mr-4 text-orange-500 active:scale-95 transition-transform">
+      <span class="material-symbols-outlined" style="font-size:26px">arrow_back</span>
+    </button>
+    <h1 class="editorial-text font-extrabold text-xl text-orange-500" id="edit-screen-title">新增支出</h1>
+    <div class="ml-auto">
+      <button id="delete-btn" onclick="deleteCurrentExpense()" class="hidden text-red-400 text-sm font-semibold active:scale-95 transition-transform">刪除</button>
+    </div>
+  </header>
+
+  <main class="pt-24 pb-36 px-6 max-w-lg mx-auto space-y-5">
+    <!-- Photo preview (if any) -->
+    <div id="edit-photo-preview" class="hidden flex justify-center">
+      <div class="relative">
+        <img id="edit-photo-img" src="" class="w-24 h-32 object-cover rounded-xl shadow-lg border border-white/10"/>
+        <button onclick="clearPhoto()" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+          <span class="material-symbols-outlined text-white" style="font-size:14px">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Store Name -->
+    <div>
+      <label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 block">店名</label>
+      <input id="edit-store" type="text" placeholder="例：7-Eleven、FamilyMart" class="w-full bg-surface-container rounded-2xl px-5 py-4 text-on-surface font-medium focus:ring-2 focus:ring-orange-500 outline-none border border-white/5"/>
+    </div>
+
+    <!-- Date & Time -->
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 block">日期</label>
+        <input id="edit-date" type="date" class="w-full bg-surface-container rounded-2xl px-4 py-4 text-on-surface font-medium focus:ring-2 focus:ring-orange-500 outline-none border border-white/5 text-sm"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 block">時間</label>
+        <input id="edit-time" type="time" class="w-full bg-surface-container rounded-2xl px-4 py-4 text-on-surface font-medium focus:ring-2 focus:ring-orange-500 outline-none border border-white/5 text-sm"/>
+      </div>
+    </div>
+
+    <!-- Category -->
+    <div>
+      <label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-3 block">類別</label>
+      <div id="category-chips" class="flex flex-wrap gap-2">
+        <!-- Chips rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">消費明細</label>
+        <button onclick="addItem()" class="text-orange-500 text-xs font-semibold flex items-center gap-1 active:scale-95 transition-transform">
+          <span class="material-symbols-outlined" style="font-size:16px">add</span> 新增項目
+        </button>
+      </div>
+      <div id="items-container" class="space-y-3"></div>
+    </div>
+
+    <!-- Total Display -->
+    <div class="bg-primary/10 border border-primary/20 rounded-2xl px-5 py-4 flex items-center justify-between">
+      <div>
+        <p class="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">總計</p>
+        <p class="editorial-text text-2xl font-extrabold text-on-surface" id="edit-total-jpy">¥ 0</p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">約</p>
+        <p class="editorial-text text-lg font-bold text-tertiary" id="edit-total-twd">NT$ 0</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Save Bar -->
+  <div class="fixed bottom-0 left-0 w-full p-5 bg-gradient-to-t from-black/95 via-black/80 to-transparent z-50">
+    <div class="max-w-lg mx-auto">
+      <button onclick="saveExpense()" class="w-full bg-orange-500 text-white font-extrabold text-lg py-5 rounded-2xl shadow-[0_12px_40px_rgba(249,115,22,0.3)] active:scale-[0.98] transition-transform flex items-center justify-center gap-3 editorial-text">
+        儲存支出
+        <span class="material-symbols-outlined fill-icon" style="font-size:22px">check_circle</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 4: RECORDS
+═══════════════════════════════════════════ -->
+<div id="screen-records" class="screen fade-in">
+  <header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-[#0a0a0a]/80 backdrop-blur-xl shadow-[0_12px_32px_rgba(0,0,0,0.3)] border-b border-white/5">
+    <h1 class="editorial-text font-bold text-lg text-primary">消費紀錄</h1>
+    <button onclick="openAddFromRecords()" class="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center active:scale-95 transition-transform shadow-lg">
+      <span class="material-symbols-outlined text-white" style="font-size:20px">add</span>
+    </button>
+  </header>
+
+  <main class="pt-24 px-6 max-w-md mx-auto">
+    <!-- Month selector + summary -->
+    <div class="mb-8">
+      <div class="bg-surface-container-high rounded-2xl px-5 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <button onclick="changeMonth(-1)" class="w-7 h-7 flex items-center justify-center rounded-full bg-surface-container active:bg-surface-container-high">
+            <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px">chevron_left</span>
+          </button>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary" style="font-size:18px">calendar_today</span>
+            <span class="font-semibold text-sm" id="records-month-label"></span>
+          </div>
+          <button onclick="changeMonth(1)" class="w-7 h-7 flex items-center justify-center rounded-full bg-surface-container active:bg-surface-container-high">
+            <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px">chevron_right</span>
+          </button>
+        </div>
+        <div class="text-right">
+          <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">本月支出</p>
+          <p class="editorial-text text-lg font-extrabold text-on-surface" id="records-total">¥ 0</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="records-list" class="space-y-6 pb-8"></div>
+    <div id="records-empty" class="hidden py-20 flex flex-col items-center text-center">
+      <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-4">
+        <span class="material-symbols-outlined text-on-surface-variant" style="font-size:28px">history_edu</span>
+      </div>
+      <p class="text-on-surface-variant font-medium text-sm">本月沒有紀錄</p>
+      <p class="text-on-surface-variant/60 text-xs mt-1">切換月份或新增支出</p>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 5: SETTINGS
+═══════════════════════════════════════════ -->
+<div id="screen-settings" class="screen fade-in">
+  <header class="fixed top-0 left-0 w-full z-50 flex items-center px-6 h-16 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-white/5">
+    <button onclick="showScreen('screen-home')" class="mr-4 text-orange-500 active:scale-95 transition-transform">
+      <span class="material-symbols-outlined" style="font-size:26px">arrow_back</span>
+    </button>
+    <h1 class="editorial-text font-bold text-xl text-primary">設定</h1>
+  </header>
+
+  <main class="pt-24 px-6 max-w-lg mx-auto space-y-5">
+    <!-- Exchange Rate -->
+    <div class="bg-surface-container rounded-2xl p-5 border border-white/5">
+      <h3 class="editorial-text font-bold text-on-surface mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-tertiary" style="font-size:20px">currency_exchange</span>
+        匯率設定
+      </h3>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-on-surface-variant font-semibold uppercase tracking-wider block mb-2">1 JPY = ? TWD</label>
+          <div class="flex items-center bg-surface-container-high rounded-xl px-4 py-3 gap-2">
+            <input id="setting-rate" type="number" step="0.001" class="flex-1 bg-transparent text-on-surface font-bold text-lg outline-none" placeholder="0.21"/>
+            <span class="text-on-surface-variant text-sm font-medium">TWD</span>
+          </div>
+          <p class="text-xs text-on-surface-variant/60 mt-1 ml-1">目前匯率約 0.21（2025年參考值）</p>
+        </div>
+        <div>
+          <label class="text-xs text-on-surface-variant font-semibold uppercase tracking-wider block mb-2">每月預算 (JPY)</label>
+          <div class="flex items-center bg-surface-container-high rounded-xl px-4 py-3 gap-2">
+            <span class="text-orange-500 font-bold">¥</span>
+            <input id="setting-budget" type="number" class="flex-1 bg-transparent text-on-surface font-bold text-lg outline-none" placeholder="80000"/>
+          </div>
+        </div>
+        <button onclick="saveSettings()" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl active:scale-95 transition-transform">
+          儲存設定
+        </button>
+      </div>
+    </div>
+
+    <!-- Data Management -->
+    <div class="bg-surface-container rounded-2xl p-5 border border-white/5">
+      <h3 class="editorial-text font-bold text-on-surface mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary" style="font-size:20px">database</span>
+        資料管理
+      </h3>
+      <div class="space-y-3">
+        <button onclick="exportData()" class="w-full flex items-center gap-3 bg-surface-container-high py-4 px-5 rounded-xl active:bg-surface-container-highest transition-colors">
+          <span class="material-symbols-outlined text-primary" style="font-size:20px">download</span>
+          <span class="font-medium text-on-surface text-sm">匯出 CSV</span>
+          <span class="material-symbols-outlined text-on-surface-variant ml-auto" style="font-size:18px">chevron_right</span>
+        </button>
+        <button onclick="confirmClearData()" class="w-full flex items-center gap-3 bg-surface-container-high py-4 px-5 rounded-xl active:bg-surface-container-highest transition-colors">
+          <span class="material-symbols-outlined text-error" style="font-size:20px">delete_forever</span>
+          <span class="font-medium text-error text-sm">清除所有資料</span>
+          <span class="material-symbols-outlined text-on-surface-variant ml-auto" style="font-size:18px">chevron_right</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- About -->
+    <div class="bg-surface-container rounded-2xl p-5 border border-white/5">
+      <h3 class="editorial-text font-bold text-on-surface mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-on-surface-variant" style="font-size:20px">info</span>
+        關於
+      </h3>
+      <p class="text-sm text-on-surface-variant">日本記帳 v1.0</p>
+      <p class="text-xs text-on-surface-variant/60 mt-1">專為日本旅遊設計的發票記帳 App</p>
+      <!-- Install tip -->
+      <div class="mt-4 bg-orange-500/10 border border-orange-500/20 rounded-xl p-3">
+        <p class="text-xs text-orange-400 font-semibold">📱 安裝到手機</p>
+        <p class="text-xs text-on-surface-variant mt-1">iPhone：點 Safari 分享按鈕 → 「加入主畫面」<br/>Android：點瀏覽器選單 → 「安裝應用程式」</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="bg-surface-container rounded-2xl p-5 border border-white/5">
+      <h3 class="editorial-text font-bold text-on-surface mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-tertiary" style="font-size:20px">bar_chart</span>
+        統計資訊
+      </h3>
+      <div class="space-y-2" id="settings-stats"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     BOTTOM NAV BAR
+═══════════════════════════════════════════ -->
+<nav id="bottom-nav" class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-5 pt-3 bg-neutral-950/85 backdrop-blur-xl rounded-t-3xl shadow-[0_-12px_32px_rgba(0,0,0,0.5)]">
+  <button onclick="showScreen('screen-home')" class="nav-btn flex flex-col items-center justify-center px-5 py-1.5 rounded-2xl transition-all duration-200 active:scale-90" data-screen="screen-home">
+    <span class="material-symbols-outlined nav-icon" style="font-size:24px">home</span>
+    <span class="text-[11px] font-semibold tracking-wide mt-0.5">首頁</span>
+  </button>
+  <button onclick="showScreen('screen-records')" class="nav-btn flex flex-col items-center justify-center px-5 py-1.5 rounded-2xl transition-all duration-200 active:scale-90" data-screen="screen-records">
+    <span class="material-symbols-outlined nav-icon" style="font-size:24px">receipt_long</span>
+    <span class="text-[11px] font-semibold tracking-wide mt-0.5">消費紀錄</span>
+  </button>
+  <button onclick="showScreen('screen-scan')" class="nav-btn flex flex-col items-center justify-center px-5 py-1.5 rounded-2xl transition-all duration-200 active:scale-90" data-screen="screen-scan">
+    <span class="material-symbols-outlined nav-icon" style="font-size:24px">qr_code_scanner</span>
+    <span class="text-[11px] font-semibold tracking-wide mt-0.5">掃描</span>
+  </button>
+  <button onclick="showScreen('screen-settings')" class="nav-btn flex flex-col items-center justify-center px-5 py-1.5 rounded-2xl transition-all duration-200 active:scale-90" data-screen="screen-settings">
+    <span class="material-symbols-outlined nav-icon" style="font-size:24px">settings</span>
+    <span class="text-[11px] font-semibold tracking-wide mt-0.5">設定</span>
+  </button>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     TOAST / CONFIRM DIALOG
+═══════════════════════════════════════════ -->
+<div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-surface-container-highest text-on-surface px-6 py-3 rounded-full text-sm font-semibold shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none whitespace-nowrap"></div>
+
+<div id="confirm-overlay" class="hidden fixed inset-0 z-[200] bg-black/70 flex items-end justify-center pb-8 px-4">
+  <div class="bg-surface-container-high w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+    <h3 class="editorial-text font-bold text-lg text-on-surface mb-2" id="confirm-title">確認</h3>
+    <p class="text-on-surface-variant text-sm mb-6" id="confirm-msg"></p>
+    <div class="flex gap-3">
+      <button onclick="closeConfirm()" class="flex-1 py-3.5 rounded-2xl bg-surface-container font-semibold text-on-surface active:scale-95 transition-transform">取消</button>
+      <button id="confirm-ok" onclick="" class="flex-1 py-3.5 rounded-2xl bg-red-500 font-bold text-white active:scale-95 transition-transform">確認刪除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════ -->
+<script>
+// ─── STATE ──────────────────────────────────
+let state = {
+  currentScreen: 'screen-home',
+  currentMonth: new Date().getMonth(),
+  currentYear: new Date().getFullYear(),
+  editingId: null,
+  capturedPhoto: null,
+  cameraStream: null,
+  settings: { rate: 0.21, budget: 80000 }
+};
+
+let expenses = [];
+
+const CATEGORIES = [
+  {id:'food',    label:'餐飲',   icon:'restaurant',   color:'text-orange-400'},
+  {id:'conv',    label:'便利商店',icon:'store',         color:'text-yellow-400'},
+  {id:'transport',label:'交通',  icon:'directions_bus',color:'text-blue-400'},
+  {id:'shopping',label:'購物',   icon:'shopping_bag',  color:'text-purple-400'},
+  {id:'hotel',   label:'住宿',   icon:'hotel',         color:'text-green-400'},
+  {id:'other',   label:'其他',   icon:'more_horiz',    color:'text-on-surface-variant'},
+];
+
+const CAT_ICON = { food:'restaurant', conv:'store', transport:'directions_bus', shopping:'shopping_bag', hotel:'hotel', other:'more_horiz' };
+
+// ─── PERSISTENCE ────────────────────────────
+function loadData() {
+  try {
+    const raw = localStorage.getItem('jp_expenses');
+    if (raw) expenses = JSON.parse(raw);
+    const s = localStorage.getItem('jp_settings');
+    if (s) state.settings = {...state.settings, ...JSON.parse(s)};
+  } catch(e) { expenses = []; }
+}
+function saveData() {
+  localStorage.setItem('jp_expenses', JSON.stringify(expenses));
+}
+function saveSettings() {
+  const r = parseFloat(document.getElementById('setting-rate').value) || 0.21;
+  const b = parseInt(document.getElementById('setting-budget').value) || 80000;
+  state.settings = { rate: r, budget: b };
+  localStorage.setItem('jp_settings', JSON.stringify(state.settings));
+  showToast('✅ 設定已儲存');
+}
+
+// ─── NAVIGATION ─────────────────────────────
+function showScreen(id) {
+  // stop camera if leaving scan
+  if (state.currentScreen === 'screen-scan' && id !== 'screen-scan') {
+    stopCamera();
+  }
+  // start camera if going to scan
+  if (id === 'screen-scan') {
+    startCamera();
+  }
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); el.classList.add('fade-in'); }
+  state.currentScreen = id;
+
+  // nav bar visibility
+  const noNav = ['screen-scan','screen-edit'];
+  document.getElementById('bottom-nav').style.display = noNav.includes(id) ? 'none' : 'flex';
+
+  // update nav active state
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    const active = b.dataset.screen === id;
+    b.classList.toggle('bg-orange-500/10', active);
+    b.classList.toggle('text-orange-400', active);
+    b.classList.toggle('text-neutral-500', !active);
+    b.querySelector('.nav-icon').style.fontVariationSettings = active ? "'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24" : "'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24";
+  });
+
+  // refresh screens
+  if (id === 'screen-home') renderHome();
+  if (id === 'screen-records') renderRecords();
+  if (id === 'screen-settings') renderSettings();
+  window.scrollTo(0,0);
+}
+
+function changeMonth(delta) {
+  state.currentMonth += delta;
+  if (state.currentMonth > 11) { state.currentMonth = 0; state.currentYear++; }
+  if (state.currentMonth < 0)  { state.currentMonth = 11; state.currentYear--; }
+  renderHome();
+  renderRecords();
+}
+
+// ─── HELPERS ────────────────────────────────
+function fmtJpy(n) { return '¥ ' + Number(n||0).toLocaleString(); }
+function fmtTwd(n) { return 'NT$ ' + Math.round((n||0) * state.settings.rate).toLocaleString(); }
+function today() { return new Date().toISOString().slice(0,10); }
+function nowTime() { const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function monthLabel(y,m) { return y+'年'+(m+1)+'月'; }
+
+function getCatLabel(id) { return (CATEGORIES.find(c=>c.id===id)||{label:'其他'}).label; }
+function getCatIcon(id)  { return CAT_ICON[id] || 'more_horiz'; }
+function getCatColor(id) { return (CATEGORIES.find(c=>c.id===id)||{color:'text-on-surface-variant'}).color; }
+
+function monthExpenses() {
+  return expenses.filter(e => {
+    const d = new Date(e.date);
+    return d.getFullYear() === state.currentYear && d.getMonth() === state.currentMonth;
+  });
+}
+
+function showToast(msg, ms=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => t.style.opacity = '0', ms);
+}
+
+// ─── HOME SCREEN ────────────────────────────
+function renderHome() {
+  document.getElementById('home-month-label').textContent = (state.currentMonth+1)+'月 '+state.currentYear;
+  const me = monthExpenses();
+  const total = me.reduce((s,e) => s+(e.totalJpy||0), 0);
+  const maxE = me.length ? Math.max(...me.map(e=>e.totalJpy||0)) : 0;
+
+  document.getElementById('home-total-jpy').textContent = fmtJpy(total);
+  document.getElementById('home-total-twd').textContent = '約 '+fmtTwd(total);
+  document.getElementById('home-count').textContent = me.length + ' 筆';
+  document.getElementById('home-max').textContent = fmtJpy(maxE);
+
+  const list = document.getElementById('home-recent-list');
+  const empty = document.getElementById('home-empty');
+  const recent = [...expenses].sort((a,b) => new Date(b.date+' '+b.time) - new Date(a.date+' '+a.time)).slice(0,5);
+
+  if (!recent.length) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    empty.classList.add('flex');
+    return;
+  }
+  empty.classList.add('hidden');
+  empty.classList.remove('flex');
+  list.innerHTML = recent.map(e => expenseCard(e)).join('');
+}
+
+function expenseCard(e) {
+  const icon = getCatIcon(e.category);
+  const color = getCatColor(e.category);
+  return `<div onclick="openEdit('${e.id}')" class="bg-surface-container-low p-4 rounded-2xl flex items-center justify-between border border-white/5 active:bg-surface-container transition-colors cursor-pointer">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 bg-surface-container-high rounded-xl flex items-center justify-center">
+        <span class="material-symbols-outlined ${color}" style="font-size:22px">${icon}</span>
+      </div>
+      <div>
+        <h4 class="font-bold text-on-surface text-sm">${escHtml(e.store||'(未命名)')}</h4>
+        <p class="text-xs text-on-surface-variant/70">${e.date} ${e.time||''}</p>
+      </div>
+    </div>
+    <div class="text-right">
+      <p class="font-bold text-on-surface text-sm">- ${fmtJpy(e.totalJpy)}</p>
+      <p class="text-[10px] text-on-surface-variant/60">${fmtTwd(e.totalJpy)}</p>
+    </div>
+  </div>`;
+}
+
+// ─── RECORDS SCREEN ─────────────────────────
+function renderRecords() {
+  document.getElementById('records-month-label').textContent = monthLabel(state.currentYear, state.currentMonth);
+  const me = monthExpenses();
+  const total = me.reduce((s,e) => s+(e.totalJpy||0), 0);
+  document.getElementById('records-total').textContent = fmtJpy(total);
+
+  const list = document.getElementById('records-list');
+  const empty = document.getElementById('records-empty');
+
+  if (!me.length) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    empty.classList.add('flex');
+    return;
+  }
+  empty.classList.add('hidden');
+  empty.classList.remove('flex');
+
+  // group by date
+  const groups = {};
+  me.sort((a,b) => new Date(b.date+' '+b.time) - new Date(a.date+' '+a.time));
+  me.forEach(e => { if(!groups[e.date]) groups[e.date]=[]; groups[e.date].push(e); });
+
+  const today2 = today();
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+
+  list.innerHTML = Object.entries(groups).sort((a,b) => b[0].localeCompare(a[0])).map(([date, items]) => {
+    let label = date;
+    if (date === today2) label = '今日';
+    else if (date === yesterday) label = '昨日';
+    const dayTotal = items.reduce((s,e) => s+(e.totalJpy||0),0);
+    return `<section>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="editorial-text font-extrabold text-xs text-on-surface-variant tracking-wide uppercase">${label}</h3>
+        <span class="text-[11px] font-bold text-on-surface-variant/60">${fmtJpy(dayTotal)}</span>
+      </div>
+      <div class="space-y-3">${items.map(e=>expenseCard(e)).join('')}</div>
+    </section>`;
+  }).join('');
+}
+
+function openAddFromRecords() {
+  state.capturedPhoto = null;
+  openEdit(null);
+}
+
+// ─── ADD / EDIT SCREEN ───────────────────────
+let selectedCategory = 'food';
+let itemCount = 0;
+
+function openEdit(id) {
+  state.editingId = id;
+  itemCount = 0;
+
+  document.getElementById('edit-screen-title').textContent = id ? '編輯支出' : '新增支出';
+  document.getElementById('delete-btn').classList.toggle('hidden', !id);
+
+  const e = id ? expenses.find(x=>x.id===id) : null;
+
+  // Fill fields
+  document.getElementById('edit-store').value = e?.store || '';
+  document.getElementById('edit-date').value = e?.date || today();
+  document.getElementById('edit-time').value = e?.time || nowTime();
+  selectedCategory = e?.category || 'food';
+
+  // Photo
+  const pv = document.getElementById('edit-photo-preview');
+  if (state.capturedPhoto || e?.photo) {
+    document.getElementById('edit-photo-img').src = state.capturedPhoto || e.photo;
+    pv.classList.remove('hidden');
+    pv.classList.add('flex');
+  } else {
+    pv.classList.add('hidden');
+    pv.classList.remove('flex');
+  }
+
+  renderCategoryChips();
+  renderItems(e?.items || [{ nameZh:'', nameJp:'', amountJpy:0 }]);
+  updateTotal();
+  showScreen('screen-edit');
+}
+
+function renderCategoryChips() {
+  document.getElementById('category-chips').innerHTML = CATEGORIES.map(c => `
+    <button onclick="selectCategory('${c.id}')" id="chip-${c.id}"
+      class="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold border transition-all active:scale-95 ${selectedCategory===c.id ? 'bg-orange-500 text-white border-orange-500' : 'bg-surface-container text-on-surface-variant border-white/10'}">
+      <span class="material-symbols-outlined ${c.color}" style="font-size:14px">${c.icon}</span>
+      ${c.label}
+    </button>`).join('');
+}
+
+function selectCategory(id) {
+  selectedCategory = id;
+  renderCategoryChips();
+}
+
+function renderItems(items) {
+  itemCount = 0;
+  document.getElementById('items-container').innerHTML = '';
+  items.forEach(item => addItem(item));
+}
+
+function addItem(item={}) {
+  const i = itemCount++;
+  const id = `item-${i}`;
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'glass-card rounded-2xl p-4 space-y-3 border border-white/5 relative';
+  div.innerHTML = `
+    <button onclick="removeItem('${id}')" class="absolute top-3 right-3 w-6 h-6 rounded-full bg-surface-container-highest flex items-center justify-center active:scale-90">
+      <span class="material-symbols-outlined text-on-surface-variant" style="font-size:14px">close</span>
+    </button>
+    <div>
+      <label class="text-xs text-neutral-500 font-semibold mb-1.5 block">中文品名</label>
+      <input type="text" value="${escHtml(item.nameZh||'')}" placeholder="例：鮪魚飯糰"
+        class="w-full bg-neutral-900 rounded-xl px-4 py-3 text-white text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500 item-namezh"/>
+    </div>
+    <div class="bg-orange-500/5 rounded-xl p-1">
+      <label class="text-xs text-neutral-500 font-semibold mb-1 block ml-3 mt-1">日本語（任意）</label>
+      <input type="text" value="${escHtml(item.nameJp||'')}" placeholder="例：ツナマヨ"
+        class="w-full bg-transparent rounded-xl px-3 py-2 text-orange-200 text-sm font-medium outline-none item-namejp"/>
+    </div>
+    <div>
+      <label class="text-xs text-neutral-500 font-semibold mb-1.5 block">金額 (JPY)</label>
+      <div class="flex items-center bg-neutral-900 rounded-xl px-4 py-3 gap-2">
+        <span class="text-orange-500 font-bold">¥</span>
+        <input type="number" value="${item.amountJpy||''}" placeholder="0" min="0"
+          class="flex-1 bg-transparent text-white font-extrabold text-xl outline-none item-amount" oninput="updateTotal()"/>
+      </div>
+    </div>`;
+  document.getElementById('items-container').appendChild(div);
+  updateTotal();
+}
+
+function removeItem(id) {
+  const el = document.getElementById(id);
+  if (el) { el.remove(); updateTotal(); }
+}
+
+function clearPhoto() {
+  state.capturedPhoto = null;
+  const pv = document.getElementById('edit-photo-preview');
+  pv.classList.add('hidden');
+  pv.classList.remove('flex');
+}
+
+function updateTotal() {
+  const amounts = [...document.querySelectorAll('.item-amount')].map(i => parseFloat(i.value)||0);
+  const total = amounts.reduce((s,v)=>s+v, 0);
+  document.getElementById('edit-total-jpy').textContent = fmtJpy(total);
+  document.getElementById('edit-total-twd').textContent = fmtTwd(total);
+}
+
+function getItems() {
+  return [...document.getElementById('items-container').children].map(div => ({
+    nameZh: div.querySelector('.item-namezh')?.value || '',
+    nameJp: div.querySelector('.item-namejp')?.value || '',
+    amountJpy: parseFloat(div.querySelector('.item-amount')?.value)||0
+  }));
+}
+
+function saveExpense() {
+  const store = document.getElementById('edit-store').value.trim();
+  const date  = document.getElementById('edit-date').value;
+  const time  = document.getElementById('edit-time').value;
+  if (!date) { showToast('⚠️ 請填寫日期'); return; }
+
+  const items = getItems();
+  const totalJpy = items.reduce((s,i)=>s+i.amountJpy, 0);
+
+  const obj = {
+    id: state.editingId || String(Date.now()),
+    store: store || '(未命名)',
+    date, time,
+    category: selectedCategory,
+    totalJpy,
+    items,
+    photo: state.capturedPhoto || (state.editingId ? (expenses.find(e=>e.id===state.editingId)?.photo||null) : null)
+  };
+
+  if (state.editingId) {
+    const idx = expenses.findIndex(e => e.id===state.editingId);
+    if (idx>=0) expenses[idx] = obj; else expenses.push(obj);
+  } else {
+    expenses.push(obj);
+  }
+  saveData();
+  state.capturedPhoto = null;
+  showToast(state.editingId ? '✅ 已更新' : '✅ 已儲存');
+  showScreen('screen-home');
+}
+
+function exitEdit() {
+  state.capturedPhoto = null;
+  // go back to previous context
+  if (state.lastScreenBeforeEdit === 'screen-records') showScreen('screen-records');
+  else showScreen('screen-home');
+}
+
+function deleteCurrentExpense() {
+  showConfirm('刪除支出', '確定要刪除這筆紀錄嗎？此操作無法復原。', () => {
+    expenses = expenses.filter(e => e.id !== state.editingId);
+    saveData();
+    showToast('🗑️ 已刪除');
+    showScreen('screen-home');
+  });
+}
+
+// ─── SETTINGS SCREEN ────────────────────────
+function renderSettings() {
+  document.getElementById('setting-rate').value = state.settings.rate;
+  document.getElementById('setting-budget').value = state.settings.budget;
+
+  const total = expenses.reduce((s,e)=>s+(e.totalJpy||0),0);
+  document.getElementById('settings-stats').innerHTML = `
+    <div class="flex justify-between text-sm"><span class="text-on-surface-variant">總筆數</span><span class="font-bold text-on-surface">${expenses.length} 筆</span></div>
+    <div class="flex justify-between text-sm"><span class="text-on-surface-variant">總支出</span><span class="font-bold text-on-surface">${fmtJpy(total)}</span></div>
+    <div class="flex justify-between text-sm"><span class="text-on-surface-variant">換算台幣</span><span class="font-bold text-tertiary">${fmtTwd(total)}</span></div>`;
+}
+
+function exportData() {
+  if (!expenses.length) { showToast('沒有資料可匯出'); return; }
+  const rows = ['日期,時間,店名,類別,明細,JPY,TWD'];
+  expenses.sort((a,b)=>a.date.localeCompare(b.date)).forEach(e => {
+    const items = (e.items||[]).map(i=>i.nameZh).filter(Boolean).join('|');
+    rows.push([e.date, e.time||'', e.store||'', getCatLabel(e.category), items, e.totalJpy, Math.round((e.totalJpy||0)*state.settings.rate)].join(','));
+  });
+  const blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '日本記帳_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  showToast('📊 已匯出 CSV');
+}
+
+function confirmClearData() {
+  showConfirm('清除所有資料', '確定要清除全部 '+expenses.length+' 筆紀錄嗎？此操作無法復原！', () => {
+    expenses = [];
+    saveData();
+    showToast('🗑️ 已清除所有資料');
+    renderSettings();
+  });
+}
+
+// ─── CAMERA ─────────────────────────────────
+let flashOn = false;
+let cameraTrack = null;
+
+async function startCamera() {
+  const video = document.getElementById('camera-video');
+  const fallback = document.getElementById('camera-fallback');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width:{ideal:1920}, height:{ideal:1080} },
+      audio: false
+    });
+    state.cameraStream = stream;
+    cameraTrack = stream.getVideoTracks()[0];
+    video.srcObject = stream;
+    video.classList.remove('hidden');
+    fallback.classList.add('hidden');
+  } catch(err) {
+    video.classList.add('hidden');
+    fallback.classList.remove('hidden');
+  }
+}
+
+function stopCamera() {
+  if (state.cameraStream) {
+    state.cameraStream.getTracks().forEach(t => t.stop());
+    state.cameraStream = null;
+    cameraTrack = null;
+  }
+  const video = document.getElementById('camera-video');
+  video.srcObject = null;
+}
+
+async function toggleFlash() {
+  if (!cameraTrack) return;
+  try {
+    flashOn = !flashOn;
+    await cameraTrack.applyConstraints({ advanced: [{ torch: flashOn }] });
+    const btn = document.getElementById('flash-btn');
+    btn.querySelector('.material-symbols-outlined').textContent = flashOn ? 'flash_on' : 'flash_off';
+  } catch(e) { showToast('此裝置不支援閃光燈'); }
+}
+
+function capturePhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  if (!video.srcObject) { showManualEntry(); return; }
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  state.capturedPhoto = canvas.toDataURL('image/jpeg', 0.8);
+  showManualEntry();
+}
+
+function handleGalleryPhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.capturedPhoto = e.target.result;
+    showManualEntry();
+  };
+  reader.readAsDataURL(file);
+}
+
+function showManualEntry() {
+  state.editingId = null;
+  state.lastScreenBeforeEdit = 'screen-home';
+  openEdit(null);
+}
+
+// ─── CONFIRM DIALOG ─────────────────────────
+let confirmCallback = null;
+function showConfirm(title, msg, cb) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  confirmCallback = cb;
+  document.getElementById('confirm-overlay').classList.remove('hidden');
+}
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.add('hidden');
+  confirmCallback = null;
+}
+document.getElementById('confirm-ok').onclick = () => {
+  closeConfirm();
+  if (confirmCallback) confirmCallback();
+};
+
+// ─── UTILS ──────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── INIT ────────────────────────────────────
+loadData();
+showScreen('screen-home');
+
+// PWA service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
