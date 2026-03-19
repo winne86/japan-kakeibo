@@ -34,6 +34,14 @@ tailwind.config = {
 <style>
 *{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:#0a0a0a;color:#fbf9f8;min-height:100dvh;overscroll-behavior:none}
+/* Safe area for notch/Dynamic Island */
+:root{--sat:env(safe-area-inset-top);--sab:env(safe-area-inset-bottom)}
+header.fixed,header[class*="fixed"]{padding-top:max(0px, env(safe-area-inset-top)) !important}
+nav#bottom-nav{padding-bottom:max(20px, env(safe-area-inset-bottom)) !important}
+.screen{padding-top:0}
+/* Adjust main content top padding to account for notch + header */
+#screen-home main,#screen-records main,#screen-settings main{padding-top:calc(64px + max(0px, env(safe-area-inset-top)) + 16px) !important}
+#screen-edit main{padding-top:calc(64px + max(0px, env(safe-area-inset-top)) + 16px) !important}
 .editorial-text{font-family:'Manrope',sans-serif}
 .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
 .fill-icon{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
@@ -372,6 +380,7 @@ input[type=number]{-moz-appearance:textfield}
           <p class="text-xs text-orange-400 font-semibold">📋 如何取得免費 API Key？</p>
           <p class="text-xs text-on-surface-variant mt-1">1. 前往 aistudio.google.com<br/>2. 點「Get API Key」→「Create API Key」<br/>3. 複製並貼上到這裡（完全免費）</p>
         </div>
+        <div id="gemini-status" class="hidden items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl"></div>
         <button onclick="saveSettings()" class="w-full bg-orange-500 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform text-sm">
           儲存 API Key
         </button>
@@ -884,6 +893,14 @@ function renderSettings() {
   document.getElementById('setting-rate').value = state.settings.rate;
   document.getElementById('setting-budget').value = state.settings.budget;
   document.getElementById('setting-gemini').value = state.settings.geminiKey || '';
+  const statusEl = document.getElementById('gemini-status');
+  if (state.settings.geminiKey) {
+    statusEl.className = 'flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl bg-green-500/10 text-green-400';
+    statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">check_circle</span> AI 辨識已啟用';
+  } else {
+    statusEl.className = 'flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl bg-orange-500/10 text-orange-400';
+    statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">warning</span> 尚未設定 API Key';
+  }
 
   const total = expenses.reduce((s,e)=>s+(e.totalJpy||0),0);
   document.getElementById('settings-stats').innerHTML = `
@@ -983,6 +1000,7 @@ function handleGalleryPhoto(event) {
 
 async function processPhotoWithAI(imageBase64) {
   if (!state.settings.geminiKey) {
+    showToast('⚠️ 請先在設定頁輸入 Gemini API Key');
     showManualEntry(null);
     return;
   }
@@ -990,10 +1008,17 @@ async function processPhotoWithAI(imageBase64) {
   try {
     const result = await ocrWithGemini(imageBase64);
     showAILoading(false);
-    showManualEntry(result);
+    if (result) {
+      showToast('✨ AI 辨識完成！請確認資料');
+      showManualEntry(result);
+    } else {
+      showToast('⚠️ 辨識結果為空，請手動填寫');
+      showManualEntry(null);
+    }
   } catch(e) {
     showAILoading(false);
-    showToast('⚠️ AI 辨識失敗，請手動填寫');
+    console.error('AI OCR error:', e);
+    showToast('⚠️ AI 辨識失敗：' + (e.message||'請檢查網路或 API Key'));
     showManualEntry(null);
   }
 }
