@@ -1030,6 +1030,7 @@ async function processPhotoWithAI(imageBase64) {
     showManualEntry(null);
     return;
   }
+  console.log('Using API key:', state.settings.geminiKey.slice(0,8) + '...');
   showAILoading(true);
   try {
     const result = await ocrWithGemini(imageBase64);
@@ -1085,7 +1086,10 @@ async function ocrWithGemini(imageBase64) {
     if (resp.ok) break;
     if (resp.status !== 404 && resp.status !== 429) break;
   }
-  if (!resp || !resp.ok) throw new Error('API error: ' + (resp ? resp.status : 'no response'));
+  if (!resp || !resp.ok) {
+    const errBody = resp ? await resp.text().catch(()=>'') : '';
+    throw new Error('API error: ' + (resp ? resp.status : 'no response') + (errBody ? ' - ' + errBody.slice(0,100) : ''));
+  }
   const data = await resp.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const match = text.match(/\{[\s\S]*\}/);
