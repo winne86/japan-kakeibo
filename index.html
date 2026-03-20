@@ -2,7 +2,7 @@
 <html class="dark" lang="zh-TW">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"/>
 <meta name="theme-color" content="#0a0a0a"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -59,6 +59,9 @@ nav#bottom-nav{padding-bottom:max(20px, env(safe-area-inset-bottom)) !important}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
 input[type=number]{-moz-appearance:textfield}
 ::-webkit-scrollbar{display:none}
+/* 防止 iOS 點擊輸入框時自動放大 */
+input,textarea,select{font-size:16px !important}
+input[type=date],input[type=time]{font-size:16px !important}
 </style>
 </head>
 <body class="bg-background text-on-background antialiased">
@@ -1064,31 +1067,25 @@ async function ocrWithGemini(imageBase64) {
 - 所有金額都是日圓整數
 - 只回傳純 JSON，不要加任何說明文字`;
 
-  // 先查詢可用模型列表，找到第一個支援 generateContent 的模型
-  let chosenModel = 'gemini-1.5-flash';
-  try {
-    const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-    if (listResp.ok) {
-      const listData = await listResp.json();
-      const visionModels = (listData.models || [])
-        .filter(m => m.supportedGenerationMethods?.includes('generateContent') && m.name.includes('flash'))
-        .map(m => m.name.replace('models/', ''));
-      if (visionModels.length > 0) chosenModel = visionModels[0];
-    }
-  } catch(e) {}
-
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${chosenModel}:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }] }],
-        generationConfig: { temperature: 0.1 }
-      })
-    }
-  );
-  if (!resp.ok) throw new Error('API error: ' + resp.status);
+  // 依序嘗試模型，直到成功
+  const MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+  let resp = null;
+  for (const model of MODELS) {
+    resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }] }],
+          generationConfig: { temperature: 0.1 }
+        })
+      }
+    );
+    if (resp.ok) break;
+    if (resp.status !== 404 && resp.status !== 429) break;
+  }
+  if (!resp || !resp.ok) throw new Error('API error: ' + (resp ? resp.status : 'no response'));
   const data = await resp.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const match = text.match(/\{[\s\S]*\}/);
