@@ -187,13 +187,13 @@ input[type=date],input[type=time]{font-size:16px !important}
     </div>
     <div class="flex items-center justify-between w-full max-w-[300px]">
       <!-- Gallery -->
-      <label class="flex flex-col items-center gap-1 cursor-pointer">
+      <button onclick="document.getElementById('gallery-input').click()" class="flex flex-col items-center gap-1">
         <div class="w-14 h-14 rounded-2xl bg-black/50 border border-white/10 flex items-center justify-center active:scale-95 transition-transform">
           <span class="material-symbols-outlined text-white" style="font-size:22px">photo_library</span>
         </div>
         <span class="text-[11px] text-white/70 font-medium">相簿</span>
-        <input type="file" accept="image/*" class="hidden" onchange="handleGalleryPhoto(event)"/>
-      </label>
+      </button>
+      <input id="gallery-input" type="file" accept="image/*" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none" onchange="handleGalleryPhoto(event)"/>
       <!-- Shutter -->
       <button onclick="capturePhoto()" class="relative group">
         <div class="absolute -inset-2 bg-orange-500/20 rounded-full blur-xl"></div>
@@ -1016,11 +1016,15 @@ function capturePhoto() {
 function handleGalleryPhoto(event) {
   const file = event.target.files[0];
   if (!file) return;
+  showToast('📷 照片已選取，處理中…');
+  // reset input so same file can be selected again
+  event.target.value = '';
   const reader = new FileReader();
   reader.onload = e => {
     state.capturedPhoto = e.target.result;
     processPhotoWithAI(state.capturedPhoto);
   };
+  reader.onerror = () => showToast('⚠️ 照片讀取失敗，請再試一次');
   reader.readAsDataURL(file);
 }
 
