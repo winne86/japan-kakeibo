@@ -69,14 +69,9 @@ input[type=number]{-moz-appearance:textfield}
 <div id="screen-home" class="screen active fade-in">
   <header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-[#0a0a0a]/80 backdrop-blur-xl shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center border border-white/10">
-        <span class="material-symbols-outlined text-primary" style="font-size:18px">account_circle</span>
-      </div>
+      <span style="font-size:28px">🇯🇵</span>
       <h1 class="editorial-text font-bold text-lg tracking-tight text-primary">日本記帳</h1>
     </div>
-    <button onclick="showScreen('screen-settings')" class="w-8 h-8 flex items-center justify-center rounded-full bg-surface-container">
-      <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px">settings</span>
-    </button>
   </header>
 
   <main class="pt-24 px-6 max-w-lg mx-auto pb-36">
@@ -107,17 +102,19 @@ input[type=number]{-moz-appearance:textfield}
     <!-- Quick Metrics -->
     <section class="grid grid-cols-2 gap-4 mb-8">
       <div class="bg-surface-container-low p-5 rounded-[1.5rem] flex flex-col justify-between h-28 border border-white/5">
-        <span class="material-symbols-outlined text-secondary" style="font-size:22px">receipt_long</span>
+        <span class="material-symbols-outlined text-secondary" style="font-size:22px">account_balance</span>
         <div>
-          <p class="text-[11px] text-on-surface-variant uppercase tracking-wider font-bold">本月筆數</p>
-          <p class="editorial-text text-xl font-bold text-on-surface" id="home-count">0 筆</p>
+          <p class="text-[11px] text-on-surface-variant uppercase tracking-wider font-bold">本月餘額</p>
+          <p class="editorial-text text-xl font-bold text-on-surface" id="home-count">¥ 0</p>
+          <p class="text-[10px] text-on-surface-variant/60 font-medium" id="home-count-twd">≈ NT$ 0</p>
         </div>
       </div>
       <div class="bg-surface-container-low p-5 rounded-[1.5rem] flex flex-col justify-between h-28 border border-white/5">
-        <span class="material-symbols-outlined text-tertiary" style="font-size:22px">payments</span>
+        <span class="material-symbols-outlined text-tertiary" style="font-size:22px">account_balance_wallet</span>
         <div>
-          <p class="text-[11px] text-on-surface-variant uppercase tracking-wider font-bold">最大單筆</p>
+          <p class="text-[11px] text-on-surface-variant uppercase tracking-wider font-bold">總餘額</p>
           <p class="editorial-text text-xl font-bold text-on-surface" id="home-max">¥ 0</p>
+          <p class="text-[10px] text-on-surface-variant/60 font-medium" id="home-max-twd">≈ NT$ 0</p>
         </div>
       </div>
     </section>
@@ -139,13 +136,6 @@ input[type=number]{-moz-appearance:textfield}
     </section>
   </main>
 
-  <!-- FAB -->
-  <div class="fixed bottom-24 right-5 z-40">
-    <button onclick="showScreen('screen-scan')" class="flex items-center gap-2 bg-gradient-to-r from-primary to-[#ff9800] text-white px-5 py-3.5 rounded-full shadow-[0_12px_32px_rgba(245,124,0,0.4)] active:scale-95 transition-transform">
-      <span class="material-symbols-outlined fill-icon" style="font-size:20px">photo_camera</span>
-      <span class="font-label font-bold text-sm tracking-tight">快速掃描</span>
-    </button>
-  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -311,7 +301,7 @@ input[type=number]{-moz-appearance:textfield}
      SCREEN 4: RECORDS
 ═══════════════════════════════════════════ -->
 <div id="screen-records" class="screen fade-in">
-  <header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-[#0a0a0a]/80 backdrop-blur-xl shadow-[0_12px_32px_rgba(0,0,0,0.3)] border-b border-white/5">
+  <header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-[#0a0a0a]/80 backdrop-blur-xl shadow-[0_12px_32px_rgba(0,0,0,0.3)]">
     <h1 class="editorial-text font-bold text-lg text-primary">消費紀錄</h1>
     <button onclick="openAddFromRecords()" class="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center active:scale-95 transition-transform shadow-lg">
       <span class="material-symbols-outlined text-white" style="font-size:20px">add</span>
@@ -356,7 +346,7 @@ input[type=number]{-moz-appearance:textfield}
      SCREEN 5: SETTINGS
 ═══════════════════════════════════════════ -->
 <div id="screen-settings" class="screen fade-in">
-  <header class="fixed top-0 left-0 w-full z-50 flex items-center px-6 h-16 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-white/5">
+  <header class="fixed top-0 left-0 w-full z-50 flex items-center px-6 h-16 bg-[#0a0a0a]/80 backdrop-blur-xl">
     <button onclick="showScreen('screen-home')" class="mr-4 text-orange-500 active:scale-95 transition-transform">
       <span class="material-symbols-outlined" style="font-size:26px">arrow_back</span>
     </button>
@@ -403,11 +393,12 @@ input[type=number]{-moz-appearance:textfield}
           <p class="text-xs text-on-surface-variant/60 mt-1 ml-1">目前匯率約 0.21（2025年參考值）</p>
         </div>
         <div>
-          <label class="text-xs text-on-surface-variant font-semibold uppercase tracking-wider block mb-2">每月預算 (JPY)</label>
+          <label class="text-xs text-on-surface-variant font-semibold uppercase tracking-wider block mb-2">每月零用錢 (JPY)</label>
           <div class="flex items-center bg-surface-container-high rounded-xl px-4 py-3 gap-2">
             <span class="text-orange-500 font-bold">¥</span>
             <input id="setting-budget" type="number" class="flex-1 bg-transparent text-on-surface font-bold text-lg outline-none" placeholder="80000"/>
           </div>
+          <p class="text-xs text-on-surface-variant/60 mt-1 ml-1">本月餘額 = 每月零用錢 − 本月支出</p>
         </div>
         <button onclick="saveSettings()" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl active:scale-95 transition-transform">
           儲存設定
@@ -632,16 +623,48 @@ function showToast(msg, ms=2500) {
 }
 
 // ─── HOME SCREEN ────────────────────────────
+function calcMonthBalance(year, month) {
+  const allowance = state.settings.budget || 80000;
+  const spent = expenses.filter(e => {
+    const d = new Date(e.date);
+    return d.getFullYear() === year && d.getMonth() === month;
+  }).reduce((s,e) => s+(e.totalJpy||0), 0);
+  return allowance - spent;
+}
+
+function calcTotalBalance() {
+  // Get all unique year-month combos from expenses + current month
+  const months = new Set(expenses.map(e => e.date.slice(0,7)));
+  months.add(state.currentYear+'-'+String(state.currentMonth+1).padStart(2,'0'));
+  let total = 0;
+  months.forEach(ym => {
+    const [y, m] = ym.split('-').map(Number);
+    total += calcMonthBalance(y, m-1);
+  });
+  return total;
+}
+
 function renderHome() {
   document.getElementById('home-month-label').textContent = (state.currentMonth+1)+'月 '+state.currentYear;
   const me = monthExpenses();
   const total = me.reduce((s,e) => s+(e.totalJpy||0), 0);
-  const maxE = me.length ? Math.max(...me.map(e=>e.totalJpy||0)) : 0;
+  const monthBalance = calcMonthBalance(state.currentYear, state.currentMonth);
+  const totalBalance = calcTotalBalance();
 
   document.getElementById('home-total-jpy').textContent = fmtJpy(total);
   document.getElementById('home-total-twd').textContent = '約 '+fmtTwd(total);
-  document.getElementById('home-count').textContent = me.length + ' 筆';
-  document.getElementById('home-max').textContent = fmtJpy(maxE);
+
+  // 本月餘額
+  const countEl = document.getElementById('home-count');
+  countEl.textContent = fmtJpy(monthBalance);
+  countEl.className = 'editorial-text text-xl font-bold ' + (monthBalance >= 0 ? 'text-secondary' : 'text-error');
+  document.getElementById('home-count-twd').textContent = '≈ '+fmtTwd(monthBalance);
+
+  // 總餘額
+  const maxEl = document.getElementById('home-max');
+  maxEl.textContent = fmtJpy(totalBalance);
+  maxEl.className = 'editorial-text text-xl font-bold ' + (totalBalance >= 0 ? 'text-tertiary' : 'text-error');
+  document.getElementById('home-max-twd').textContent = '≈ '+fmtTwd(totalBalance);
 
   const list = document.getElementById('home-recent-list');
   const empty = document.getElementById('home-empty');
@@ -1042,7 +1065,7 @@ async function ocrWithGemini(imageBase64) {
 - 只回傳純 JSON，不要加任何說明文字`;
 
   const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
