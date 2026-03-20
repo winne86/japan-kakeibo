@@ -1072,23 +1072,29 @@ async function ocrWithGemini(imageBase64) {
 - 所有金額都是日圓整數
 - 只回傳純 JSON，不要加任何說明文字`;
 
-  // 依序嘗試模型，直到成功
-  const MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+  // 依序嘗試模型，對 429 加入重試
+  const MODELS = ['gemini-2.0-flash-lite', 'gemini-2.0-flash'];
+  const BODY = JSON.stringify({
+    contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }] }],
+    generationConfig: { temperature: 0.1 }
+  });
   let resp = null;
   for (const model of MODELS) {
-    resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: base64 } }] }],
-          generationConfig: { temperature: 0.1 }
-        })
+    for (let attempt = 0; attempt < 3; attempt++) {
+      resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: BODY }
+      );
+      if (resp.ok) break;
+      if (resp.status === 429) {
+        // 限流：等待後重試
+        await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+        continue;
       }
-    );
-    if (resp.ok) break;
-    if (resp.status !== 404 && resp.status !== 429) break;
+      break; // 其他錯誤直接跳下一個模型
+    }
+    if (resp && resp.ok) break;
+    if (resp && resp.status !== 429 && resp.status !== 404) break;
   }
   if (!resp || !resp.ok) {
     const errBody = resp ? await resp.text().catch(()=>'') : '';
